@@ -13,7 +13,6 @@ phases:
   post_build:
     commands:
       - mvn clean package
-      – serverless deploy –stage $env –region us-east-1 –verbose
 
 artifacts:
   type: zip
