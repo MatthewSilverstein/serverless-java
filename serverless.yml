@@ -1,0 +1,52 @@
+service: aws-java-maven # NOTE: update this with your service name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: java8
+  profile: devProfile
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:*"
+      Resource: "*"
+
+package:
+  artifact: target/transactions-api-dev.jar
+
+functions:
+  get-transactions:
+    handler: com.serverless.GetTransactionsHandler
+    events:
+      - http:
+          path: /accounts/{account_id}/transactions
+          method: get
+  post-transaction:
+    handler: com.serverless.PostTransactionsHandler
+    events:
+      - http:
+          path: /accounts/{account_id}/transactions
+          method: post
+
+resources:
+  Resources:
+    transactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: transactions_table
+        AttributeDefinitions:
+          - AttributeName: account_id
+            AttributeType: S
+          - AttributeName: transaction_date
+            AttributeType: S
+        KeySchema:
+          - AttributeName: account_id
+            KeyType: HASH
+          - AttributeName: transaction_date
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
