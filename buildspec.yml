@@ -3,11 +3,11 @@ version: 0.2
 phases:
   build:
     commands:
-      – mvn clean test
+      – mvn test
 
   post_build:
     commands:
-      - mvn clean package
+      - mvn package
 
 artifacts:
   type: zip
