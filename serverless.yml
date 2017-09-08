@@ -1,8 +1,6 @@
 service: aws-java-maven # NOTE: update this with your service name
 
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
-# frameworkVersion: "=X.X.X"
+
 
 provider:
   name: aws
@@ -13,6 +11,12 @@ provider:
       Action:
         - "dynamodb:*"
       Resource: "*"
+
+custom:
+  dev_wcu: 1
+  dev_rcu: 1
+  beta_wcu: 5
+  beta_rcu: 5
 
 package:
   artifact: target/transactions-api-dev.jar
@@ -36,7 +40,7 @@ resources:
     transactionsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: transactions_table
+        TableName: ${opt:stage}_transactions_table
         AttributeDefinitions:
           - AttributeName: account_id
             AttributeType: S
@@ -48,5 +52,5 @@ resources:
           - AttributeName: transaction_date
             KeyType: RANGE
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: ${self:custom.${opt:stage}_rcu}
+          WriteCapacityUnits: ${self:custom.${opt:stage}_wcu}

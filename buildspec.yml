@@ -15,6 +15,7 @@ phases:
   post_build:
     commands:
       - mvn package
+      - serverless deploy --stage ${STAGE}
 
 artifacts:
   type: zip
