@@ -14,5 +14,3 @@ artifacts:
   files:
     – serverless.yml
     – target/transactions-api-dev.jar
-
-discard-paths: yes
