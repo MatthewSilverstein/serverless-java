@@ -10,11 +10,9 @@ phases:
     commands:
       - echo Build completed on `date`
       - mvn package
-      - ls
-      - ls target
 
 artifacts:
   type: zip
   files:
-    – serverless.yml
-    – target/transactions-api-dev.jar
+    - serverless.yml
+    - target/transactions-api-dev.jar
