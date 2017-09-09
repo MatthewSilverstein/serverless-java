@@ -15,6 +15,7 @@ phases:
 artifacts:
   type: zip
   files:
-    - buildspec*
+    - buildspec-build.yml
+    - buildspec-deploy.yml
     – serverless.yml
     – target/transactions-api-dev.jar
