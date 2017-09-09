@@ -10,6 +10,8 @@ phases:
     commands:
       - echo Build completed on `date`
       - mvn package
+      - ls
+      - ls target
 
 artifacts:
   type: zip
