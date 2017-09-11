@@ -4,6 +4,7 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
@@ -25,9 +26,15 @@ public class DynamoDBAdapter {
 
     private final AmazonDynamoDB client;
 
+    private final DynamoDBMapperConfig config;
+
     private DynamoDBAdapter() {
         client = AmazonDynamoDBClientBuilder.standard().withEndpointConfiguration(
                 new AwsClientBuilder.EndpointConfiguration("https://dynamodb.us-east-1.amazonaws.com", "us-east-1"))
+                .build();
+        DynamoDBMapperConfig.TableNameOverride override = DynamoDBMapperConfig.TableNameOverride.withTableNamePrefix(System.getenv("stage_"));
+        config = new DynamoDBMapperConfig.Builder()
+                .withTableNameOverride(override)
                 .build();
         logger.info("Created DynamoDB client");
     }
@@ -37,7 +44,7 @@ public class DynamoDBAdapter {
     }
 
     public List<Transaction> getTransactions(String accountId) throws IOException {
-        DynamoDBMapper mapper = new DynamoDBMapper(client);
+        DynamoDBMapper mapper = new DynamoDBMapper(client, config);
         Map<String, AttributeValue> vals = new HashMap<>();
         vals.put(":val1",new AttributeValue().withS(accountId));
         DynamoDBQueryExpression<Transaction> queryExpression = new DynamoDBQueryExpression<Transaction>()
@@ -48,9 +55,8 @@ public class DynamoDBAdapter {
 
 
     public void putTransaction(Transaction transaction) throws IOException{
-        DynamoDBMapper mapper = new DynamoDBMapper(client);
+        DynamoDBMapper mapper = new DynamoDBMapper(client, config);
         mapper.save(transaction);
     }
-
 }
 

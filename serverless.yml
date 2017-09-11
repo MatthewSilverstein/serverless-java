@@ -11,6 +11,8 @@ provider:
       Action:
         - "dynamodb:*"
       Resource: "*"
+  environment:
+    stage: ${opt:stage}
 
 custom:
   dev_wcu: 1
