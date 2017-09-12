@@ -15,8 +15,8 @@ provider:
     stage: ${opt:stage}
 
 custom:
-  dev_wcu: 1
-  dev_rcu: 1
+  alpha_wcu: 1
+  alpha_rcu: 1
   beta_wcu: 5
   beta_rcu: 5
 

@@ -17,5 +17,6 @@ artifacts:
   files:
     - buildspec-build.yml
     - buildspec-deploy.yml
+    - buildspec-integration-test.yml
     - serverless.yml
     - target/transactions-api-dev.jar

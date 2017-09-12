@@ -4,12 +4,11 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - mvn test
+      -  mvn verify -DargLine="-Dstage=${STAGE}" -P integration-test
 
   post_build:
     commands:
       - echo Build completed on `date`
-      - mvn package
 
 artifacts:
   type: zip

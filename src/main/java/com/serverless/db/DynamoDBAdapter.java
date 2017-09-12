@@ -32,7 +32,7 @@ public class DynamoDBAdapter {
         client = AmazonDynamoDBClientBuilder.standard().withEndpointConfiguration(
                 new AwsClientBuilder.EndpointConfiguration("https://dynamodb.us-east-1.amazonaws.com", "us-east-1"))
                 .build();
-        DynamoDBMapperConfig.TableNameOverride override = DynamoDBMapperConfig.TableNameOverride.withTableNamePrefix(System.getenv("stage_"));
+        DynamoDBMapperConfig.TableNameOverride override = DynamoDBMapperConfig.TableNameOverride.withTableNamePrefix(System.getenv("stage") + "_");
         config = new DynamoDBMapperConfig.Builder()
                 .withTableNameOverride(override)
                 .build();
