@@ -5,7 +5,6 @@ service: aws-java-maven # NOTE: update this with your service name
 provider:
   name: aws
   runtime: java8
-  profile: devProfile
   iamRoleStatements:
     - Effect: "Allow"
       Action:

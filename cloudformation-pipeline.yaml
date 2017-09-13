@@ -1,0 +1,274 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Automate provisioning of CodeBuild with CodePipeline
+Parameters:
+  MyApp:
+    Type: String
+    Default: MyApp
+  GitHubUser:
+    Type: String
+  Repo:
+    Type: String
+  Branch:
+    Type: String
+    Default: master
+  GitHubToken:
+    Type: String
+    NoEcho: "true"
+  BuildSpecBuild:
+    Type: String
+    Default: buildspec-build.yml
+  BuildSpecDeploy:
+    Type: String
+    Default: buildspec-deploy.yml
+  BuildSpecIntegrationTest:
+    Type: String
+    Default: buildspec-integration-test.yml
+Resources:
+  AppPipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties:
+      RoleArn: !GetAtt [AppPipelineRole, Arn]
+      ArtifactStore:
+        Type: S3
+        Location:
+          Ref: ArtifactStoreBucket
+      Stages:
+        - Name: Source
+          Actions:
+            - InputArtifacts: []
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: '1'
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Source"]]
+              Configuration:
+                Owner:
+                  Ref: GitHubUser
+                Repo:
+                  Ref: Repo
+                Branch:
+                  Ref: Branch
+                OAuthToken:
+                  Ref: GitHubToken
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - InputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Source"]]
+              Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Build"]]
+              Configuration:
+                ProjectName: !Ref CodeBuildMavenBuildProject
+              RunOrder: 1
+        - Name: Alpha
+          Actions:
+            - InputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Build"]]
+              Name: DeployAlpha
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Alpha"]]
+              Configuration:
+                ProjectName: !Ref CodeBuildDeployAlphaProject
+              RunOrder: 1
+            - InputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Alpha"]]
+              Name: IntegrationTestAlpha
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "IntegrationTestAlpha"]]
+              Configuration:
+                ProjectName: !Ref CodeBuildIntegrationTestAlphaProject
+              RunOrder: 2
+        - Name: Beta
+          Actions:
+            - InputArtifacts:
+                - Name: !Join ["-", [Ref: MyApp, "Alpha"]]
+              Name: DeployBeta
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              OutputArtifacts: []
+              Configuration:
+                ProjectName: !Ref CodeBuildDeployBetaProject
+              RunOrder: 1
+  AppPipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Action: "sts:AssumeRole"
+            Principal:
+              Service: "codepipeline.amazonaws.com"
+            Effect: "Allow"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  CodeBuildMavenBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}CodeBuildMavenBuildProject
+      Description: A description about my project
+      ServiceRole: !GetAtt [CodeBuildMavenBuildRole, Arn]
+      Artifacts:
+        Packaging: NONE
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/java:openjdk-8
+        PrivilegedMode: false
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Ref BuildSpecBuild
+      TimeoutInMinutes: 60
+  CodeBuildMavenBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Action: "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service: "codebuild.amazonaws.com"
+      Path: "/service-role/"
+      RoleName: !Sub ${AWS::StackName}CodeBuildMavenBuildRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  CodeBuildDeployAlphaProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}CodeBuildDeployAlphaProject
+      Description: A description about my project
+      ServiceRole: !GetAtt [CodeBuildDeployAlphaRole, Arn]
+      Artifacts:
+        Packaging: NONE
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/java:openjdk-8
+        PrivilegedMode: false
+        EnvironmentVariables:
+        - Name: STAGE
+          Value: alpha
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Ref BuildSpecDeploy
+      TimeoutInMinutes: 60
+  CodeBuildDeployAlphaRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Action: "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service: "codebuild.amazonaws.com"
+      Path: "/service-role/"
+      RoleName: !Sub ${AWS::StackName}CodeBuildDeployAlphaRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  CodeBuildIntegrationTestAlphaProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}CodeBuildIntegrationTestAlphaProject
+      Description: A description about my project
+      ServiceRole: !GetAtt [CodeBuildIntegrationTestAlphaRole, Arn]
+      Artifacts:
+        Packaging: NONE
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/java:openjdk-8
+        PrivilegedMode: false
+        EnvironmentVariables:
+        - Name: STAGE
+          Value: alpha
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Ref BuildSpecIntegrationTest
+      TimeoutInMinutes: 60
+  CodeBuildIntegrationTestAlphaRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Action: "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service: "codebuild.amazonaws.com"
+      Path: "/service-role/"
+      RoleName: !Sub ${AWS::StackName}CodeBuildIntegrationTestAlphaRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  CodeBuildDeployBetaProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}CodeBuildDeployBetaProject
+      Description: A description about my project
+      ServiceRole: !GetAtt [CodeBuildDeployBetaRole, Arn]
+      Artifacts:
+        Packaging: NONE
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/java:openjdk-8
+        PrivilegedMode: false
+        EnvironmentVariables:
+        - Name: STAGE
+          Value: beta
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Ref BuildSpecDeploy
+      TimeoutInMinutes: 60
+  CodeBuildDeployBetaRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Action: "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service: "codebuild.amazonaws.com"
+      Path: "/service-role/"
+      RoleName: !Sub ${AWS::StackName}CodeBuildDeployBetaRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: BucketOwnerFullControl
